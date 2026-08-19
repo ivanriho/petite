@@ -603,15 +603,221 @@ class CatchTheSky:
         self.root.mainloop()
 
 
+class TargetHitGame:
+    # Ett snabbt spel där spelaren klickar på rörliga mål
+    def __init__(self, root):
+        self.root = root
+        self.width = 620
+        self.height = 460
+        self.score = 0
+        self.lives = 3
+        self.time_left = 30
+        self.state = "ready"
+        self.target_id = None
+        self.target_x = 0
+        self.target_y = 0
+        self.target_radius = 25
+        self.after_id = None
+
+        self.create_layout()
+        self.reset_game()
+
+    def create_layout(self):
+        font_name = "Helvetica" if platform.system() == "Darwin" else "Arial"
+        self.title = tk.Label(self.root, text="Klicka målet", font=(font_name, 24, "bold"), fg="#14213d")
+        self.title.pack(pady=(16, 6))
+
+        self.hud = tk.Frame(self.root, bg="#edf5ff")
+        self.hud.pack(fill="x", padx=18, pady=4)
+
+        self.score_label = tk.Label(self.hud, text="Poäng: 0", font=(font_name, 12, "bold"), bg="#edf5ff")
+        self.score_label.grid(row=0, column=0, padx=12, pady=6)
+
+        self.lives_label = tk.Label(self.hud, text="Liv: 3", font=(font_name, 12, "bold"), bg="#edf5ff")
+        self.lives_label.grid(row=0, column=1, padx=12, pady=6)
+
+        self.timer_label = tk.Label(self.hud, text="Tid: 30s", font=(font_name, 12, "bold"), bg="#edf5ff")
+        self.timer_label.grid(row=0, column=2, padx=12, pady=6)
+
+        self.canvas = tk.Canvas(self.root, width=self.width, height=self.height - 140, bg="#eef7ff", highlightthickness=2, highlightbackground="#b6cee8")
+        self.canvas.pack(padx=18, pady=(6, 8))
+        self.canvas.bind("<Button-1>", self.handle_click)
+
+        frame = tk.Frame(self.root, bg="#f6f9ff")
+        frame.pack(fill="x", padx=18, pady=(0, 16))
+
+        self.start_button = tk.Button(frame, text="Starta", command=self.start_game, font=(font_name, 12, "bold"), bg="#2ecc71", fg="white", width=12)
+        self.start_button.grid(row=0, column=0, padx=8, pady=4)
+
+        self.restart_button = tk.Button(frame, text="Nytt spel", command=self.restart_game, font=(font_name, 12, "bold"), bg="#3498db", fg="white", width=12)
+        self.restart_button.grid(row=0, column=1, padx=8, pady=4)
+
+    def update_hud(self):
+        self.score_label.config(text=f"Poäng: {self.score}")
+        self.lives_label.config(text=f"Liv: {self.lives}")
+        self.timer_label.config(text=f"Tid: {int(self.time_left)}s")
+
+    def show_message(self, text):
+        font_name = "Helvetica" if platform.system() == "Darwin" else "Arial"
+        self.canvas.delete("message")
+        self.canvas.create_text(self.width / 2, self.height - 120, text=text, font=(font_name, 15, "bold"), fill="#11263e", tags="message")
+
+    def draw_background(self):
+        self.canvas.delete("background")
+        for _ in range(35):
+            x = random_between(10, self.width - 10)
+            y = random_between(10, self.height - 140)
+            size = random_between(2, 5)
+            self.canvas.create_oval(x, y, x + size, y + size, fill="#cfe4ff", outline="#cfe4ff", tags="background")
+
+    def place_target(self):
+        self.canvas.delete("target")
+        self.target_x = random_between(40, self.width - 40)
+        self.target_y = random_between(40, self.height - 180)
+        self.target_radius = random_between(20, 28)
+        self.target_id = self.canvas.create_oval(
+            self.target_x - self.target_radius,
+            self.target_y - self.target_radius,
+            self.target_x + self.target_radius,
+            self.target_y + self.target_radius,
+            fill="#ff6b6b",
+            outline="#b71c1c",
+            width=3,
+            tags="target",
+        )
+
+    def reset_game(self):
+        self.score = 0
+        self.lives = 3
+        self.time_left = 30
+        self.canvas.delete("all")
+        self.draw_background()
+        self.place_target()
+        self.update_hud()
+        self.show_message("Tryck på Starta")
+        self.state = "ready"
+
+    def handle_click(self, event):
+        if self.state != "running":
+            return
+
+        dist = distance_between(event.x, event.y, self.target_x, self.target_y)
+        if dist <= self.target_radius:
+            self.score += 10
+            self.show_message("Rätt träff!")
+            self.place_target()
+        else:
+            self.lives -= 1
+            self.show_message("Miss!")
+            if self.lives <= 0:
+                self.end_game()
+
+        self.update_hud()
+
+    def start_game(self):
+        if self.state == "running":
+            return
+        self.state = "running"
+        self.show_message("Kör!")
+        self.start_tick_loop()
+
+    def restart_game(self):
+        self.cancel_tick_loop()
+        self.reset_game()
+        self.start_game()
+
+    def tick(self):
+        if self.state != "running":
+            return
+
+        self.time_left = max(0, self.time_left - 0.03)
+        self.update_hud()
+
+        if self.time_left <= 0:
+            self.end_game()
+            return
+
+        self.after_id = self.root.after(30, self.tick)
+
+    def start_tick_loop(self):
+        self.cancel_tick_loop()
+        self.after_id = self.root.after(30, self.tick)
+
+    def cancel_tick_loop(self):
+        if self.after_id is not None:
+            self.root.after_cancel(self.after_id)
+            self.after_id = None
+
+    def end_game(self):
+        font_name = "Helvetica" if platform.system() == "Darwin" else "Arial"
+        self.state = "game_over"
+        self.cancel_tick_loop()
+        self.show_message("Spelet slut")
+        self.canvas.create_text(self.width / 2, 50, text=f"Slutpoäng: {self.score}", font=(font_name, 22, "bold"), fill="#15263d", tags="summary")
+        messagebox.showinfo("Game over", f"Du fick {self.score} poäng på {30 - int(self.time_left)} sekunder.")
+
+    def run(self):
+        if platform.system() == "Darwin":
+            self.root.update()
+            self.root.lift()
+            self.root.focus()
+
+        self.root.mainloop()
+
+
+class GameSelector:
+    # Välj mellan de två spelet i programmet
+    def __init__(self):
+        self.root = build_window("Välj spel", 360, 180)
+        self.root.protocol("WM_DELETE_WINDOW", self.close_selector)
+        self.selection = None
+        self.create_layout()
+
+    def create_layout(self):
+        font_name = "Helvetica" if platform.system() == "Darwin" else "Arial"
+
+        title = tk.Label(self.root, text="Välj ett spel", font=(font_name, 18, "bold"), fg="#122033")
+        title.pack(pady=(20, 12))
+
+        frame = tk.Frame(self.root)
+        frame.pack()
+
+        tk.Button(frame, text="Catch the Sky", command=lambda: self.choose("sky"), font=(font_name, 12, "bold"), bg="#2ecc71", fg="white", width=16).grid(row=0, column=0, padx=8, pady=6)
+        tk.Button(frame, text="Klicka målet", command=lambda: self.choose("target"), font=(font_name, 12, "bold"), bg="#3498db", fg="white", width=16).grid(row=1, column=0, padx=8, pady=6)
+
+    def choose(self, game_name):
+        self.selection = game_name
+        self.root.destroy()
+
+    def close_selector(self):
+        self.selection = None
+        self.root.destroy()
+
+    def run(self):
+        self.root.mainloop()
+        return self.selection
+
+
 # ═══════════════════════════════════════════════════════════════════════════
 # PROGRAMMETS STARTPUNKT
 # ═══════════════════════════════════════════════════════════════════════════
 
 def main():
-    # Huvudfunktion - startar hela spelet
-    root = build_window("Catch the Sky", 820, 620)  # Skapa fönstret
-    game = CatchTheSky(root)  # Skapa spel-objektet
-    game.run()  # Starta spelet
+    # Huvudfunktion - låter användaren välja mellan de två spelen
+    selector = GameSelector()
+    selected_game = selector.run()
+
+    if selected_game is None:
+        return
+
+    if selected_game == "sky":
+        root = build_window("Catch the Sky", 820, 620)
+        game = CatchTheSky(root)
+    else:
+        root = build_window("Klicka målet", 620, 460)
+        game = TargetHitGame(root)
+
+    game.run()
 
 
 if __name__ == "__main__":
