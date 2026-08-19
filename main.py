@@ -39,6 +39,7 @@ import math
 import random
 import tkinter as tk
 from tkinter import messagebox
+import platform  # För att detektera vilket operativsystem som används (Windows/Mac/Linux)
 
 # ═══════════════════════════════════════════════════════════════════════════
 # HJÄLPFUNKTIONER - Användbara verktyg för spelet
@@ -70,6 +71,13 @@ def build_window(title, width, height):
     root.title(title)  # Sätt fönstrets titel
     root.geometry(f"{width}x{height}")  # Sätt fönstrets storlek
     root.resizable(False, False)  # Gör så man inte kan ändra storlek
+    
+    # Mac-specifik optimering: göra huvudfönstret aktiv
+    if platform.system() == "Darwin":
+        root.update()  # Uppdatera fönstret omedelbar på Mac
+        root.lift()  # Höj fönstret till toppen
+        root.focus()  # Ge fönstret fokus
+    
     return root
 
 
@@ -121,29 +129,32 @@ class CatchTheSky:
 
     def make_title(self):
         # Skapa en titel-etikett längst upp i fönstret
-        label = tk.Label(self.root, text="Catch the Sky", font=("Arial", 24, "bold"), fg="#122033")
+        # Använd Helvetica på Mac, Arial på Windows (bättre rendering)
+        font_name = "Helvetica" if platform.system() == "Darwin" else "Arial"
+        label = tk.Label(self.root, text="Catch the Sky", font=(font_name, 24, "bold"), fg="#122033")
         label.pack(pady=(16, 6))  # Placera med mellanrum
         return label
 
     def make_hud(self):
         # Skapa informationspanelen (HUD = Heads Up Display)
+        font_name = "Helvetica" if platform.system() == "Darwin" else "Arial"
         frame = tk.Frame(self.root, bg="#edf5ff")  # Container för all info
         frame.pack(fill="x", padx=18, pady=4)
 
         # Visa poäng
-        self.score_label = tk.Label(frame, text="Poäng: 0", font=("Arial", 12, "bold"), bg="#edf5ff")
+        self.score_label = tk.Label(frame, text="Poäng: 0", font=(font_name, 12, "bold"), bg="#edf5ff")
         self.score_label.grid(row=0, column=0, padx=12, pady=6)
 
         # Visa nivå
-        self.level_label = tk.Label(frame, text="Nivå: 1", font=("Arial", 12, "bold"), bg="#edf5ff")
+        self.level_label = tk.Label(frame, text="Nivå: 1", font=(font_name, 12, "bold"), bg="#edf5ff")
         self.level_label.grid(row=0, column=1, padx=12, pady=6)
 
         # Visa antal liv
-        self.lives_label = tk.Label(frame, text="Liv: 3", font=("Arial", 12, "bold"), bg="#edf5ff")
+        self.lives_label = tk.Label(frame, text="Liv: 3", font=(font_name, 12, "bold"), bg="#edf5ff")
         self.lives_label.grid(row=0, column=2, padx=12, pady=6)
 
         # Visa tid kvar
-        self.timer_label = tk.Label(frame, text="Tid: 45s", font=("Arial", 12, "bold"), bg="#edf5ff")
+        self.timer_label = tk.Label(frame, text="Tid: 45s", font=(font_name, 12, "bold"), bg="#edf5ff")
         self.timer_label.grid(row=0, column=3, padx=12, pady=6)
 
         return frame
@@ -156,29 +167,43 @@ class CatchTheSky:
 
     def make_buttons(self):
         # Skapa knappar för att starta, pausa och starta om spelet
+        font_name = "Helvetica" if platform.system() == "Darwin" else "Arial"
         frame = tk.Frame(self.root, bg="#f6f9ff")
         frame.pack(fill="x", padx=18, pady=(0, 16))
 
         # "Starta" knapp - grön
-        self.start_button = tk.Button(frame, text="Starta", command=self.start_game, font=("Arial", 12, "bold"), bg="#2ecc71", fg="white", width=12)
+        self.start_button = tk.Button(frame, text="Starta", command=self.start_game, font=(font_name, 12, "bold"), bg="#2ecc71", fg="white", width=12)
         self.start_button.grid(row=0, column=0, padx=8, pady=4)
 
         # "Pausa" knapp - orange
-        self.pause_button = tk.Button(frame, text="Pausa", command=self.toggle_pause, font=("Arial", 12, "bold"), bg="#f39c12", fg="white", width=12)
+        self.pause_button = tk.Button(frame, text="Pausa", command=self.toggle_pause, font=(font_name, 12, "bold"), bg="#f39c12", fg="white", width=12)
         self.pause_button.grid(row=0, column=1, padx=8, pady=4)
 
         # "Nytt spel" knapp - blå
-        self.restart_button = tk.Button(frame, text="Nytt spel", command=self.restart_game, font=("Arial", 12, "bold"), bg="#3498db", fg="white", width=12)
+        self.restart_button = tk.Button(frame, text="Nytt spel", command=self.restart_game, font=(font_name, 12, "bold"), bg="#3498db", fg="white", width=12)
         self.restart_button.grid(row=0, column=2, padx=8, pady=4)
 
         return frame
 
     def bind_keys(self):
-        # Registrera tangentbordskommandon
+        # Registrera tangentbordskommandon för både pilknappar och A/D (för Mac-användare)
+        # Piltangenter (fungerar överallt)
         self.root.bind("<KeyPress-Left>", self.handle_left_press)  # Vänster pil nedtryckt
         self.root.bind("<KeyPress-Right>", self.handle_right_press)  # Höger pil nedtryckt
         self.root.bind("<KeyRelease-Left>", self.handle_left_release)  # Vänster pil släppt
         self.root.bind("<KeyRelease-Right>", self.handle_right_release)  # Höger pil släppt
+        
+        # A/D-tangenter som alternativ (många Mac-användare föredrar detta)
+        self.root.bind("<KeyPress-a>", self.handle_left_press)  # A = vänster
+        self.root.bind("<KeyPress-A>", self.handle_left_press)  # A (versaler)
+        self.root.bind("<KeyRelease-a>", self.handle_left_release)  # A släppt
+        self.root.bind("<KeyRelease-A>", self.handle_left_release)  # A släppt (versaler)
+        
+        self.root.bind("<KeyPress-d>", self.handle_right_press)  # D = höger
+        self.root.bind("<KeyPress-D>", self.handle_right_press)  # D (versaler)
+        self.root.bind("<KeyRelease-d>", self.handle_right_release)  # D släppt
+        self.root.bind("<KeyRelease-D>", self.handle_right_release)  # D släppt (versaler)
+        
         self.root.bind("<space>", self.handle_space)  # Mellanslag för start/pausa
 
     def handle_left_press(self, event):
@@ -280,10 +305,11 @@ class CatchTheSky:
 
     def show_message(self, text):
         # Visa ett meddelande på mitten av canvas (för t ex "Kör!" eller "Pausad")
+        font_name = "Helvetica" if platform.system() == "Darwin" else "Arial"
         self.msg = text
         self.canvas.delete("message")  # Ta bort gammal meddelande
         # Rita nytt meddelande
-        self.canvas.create_text(self.width / 2, self.height - 160, text=text, font=("Arial", 15, "bold"), fill="#11263e", tags="message")
+        self.canvas.create_text(self.width / 2, self.height - 160, text=text, font=(font_name, 15, "bold"), fill="#11263e", tags="message")
 
     def start_game(self):
         # Starta spelet (kallas när du klickar Start eller SPACE)
@@ -557,16 +583,23 @@ class CatchTheSky:
 
     def end_game(self):
         # Avsluta spelet och visa resultat
+        font_name = "Helvetica" if platform.system() == "Darwin" else "Arial"
         self.state = "game_over"  # Ändra spelets tillstånd
         self.cancel_tick_loop()  # Sluta uppdatera spelet
         self.show_message("Spelet slut")  # Visa meddelande på canvas
         # Rita slutresultatet på canvas
-        self.canvas.create_text(self.width / 2, 90, text=f"Slutpoäng: {self.score}", font=("Arial", 22, "bold"), fill="#15263d", tags="summary")
+        self.canvas.create_text(self.width / 2, 90, text=f"Slutpoäng: {self.score}", font=(font_name, 22, "bold"), fill="#15263d", tags="summary")
         # Visa en popup-ruta med slutresultatet
         messagebox.showinfo("Game over", f"Du fick {self.score} poäng och nådde nivå {self.level}.")
 
     def run(self):
         # Starta Tkinter-loopen och gör GUI interaktiv
+        # Mac-specifik optimering: fokusera på fönstret
+        if platform.system() == "Darwin":
+            self.root.update()  # Uppdatera GUI
+            self.root.lift()  # Höj fönstret
+            self.root.focus()  # Ge fokus till fönstret
+        
         self.root.mainloop()
 
 
