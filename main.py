@@ -12,3 +12,5 @@ if user == "guest":
         print("Module not found. Please install the required module.")  
 
         offhfn
+        defd
+        d
